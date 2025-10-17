@@ -11,6 +11,7 @@ export const useStockfish = () => {
   const [isReady, setIsReady] = useState(false);
   const [bestMove, setBestMove] = useState<StockfishMove | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [engineStatus, setEngineStatus] = useState<'loading' | 'uci_init' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
     let mounted = true;
@@ -26,11 +27,16 @@ export const useStockfish = () => {
         const message = event.data;
         
         if (message === 'worker_ready') {
-          // Worker is ready, initialize UCI
+          // Worker loaded, now initialize UCI protocol
+          setEngineStatus('uci_init');
           worker.postMessage('uci');
+        } else if (message === 'uciok') {
+          // UCI initialized, now configure engine and check readiness
           worker.postMessage('setoption name Ponder value true');
           worker.postMessage('isready');
         } else if (message === 'readyok') {
+          // Engine fully ready to accept commands
+          setEngineStatus('ready');
           setIsReady(true);
         } else if (message.startsWith('bestmove')) {
           setIsAnalyzing(false);
@@ -44,6 +50,7 @@ export const useStockfish = () => {
           }
         } else if (message.startsWith('error:')) {
           console.error('Stockfish error:', message);
+          setEngineStatus('error');
         }
       };
 
@@ -88,6 +95,7 @@ export const useStockfish = () => {
     isReady,
     bestMove,
     isAnalyzing,
+    engineStatus,
     analyzePosition,
     stopAnalysis,
   };

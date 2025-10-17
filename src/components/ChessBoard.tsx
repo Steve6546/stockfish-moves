@@ -5,26 +5,28 @@ import { useStockfish } from '@/hooks/useStockfish';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Trash2, Loader2 } from 'lucide-react';
+import { RefreshCw, Trash2, Loader2, Zap, Brain } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export const ChessBoard = () => {
   const [game, setGame] = useState(new Chess());
   const [position, setPosition] = useState(game.fen());
   const [playerSide, setPlayerSide] = useState<'w' | 'b'>('w'); // 'w' for white, 'b' for black
-  const { isReady, bestMove, isAnalyzing, analyzePosition } = useStockfish();
+  const [analysisDepth, setAnalysisDepth] = useState(18); // Default: Balanced
+  const { isReady, bestMove, isAnalyzing, engineStatus, analyzePosition } = useStockfish();
 
   // Trigger analysis only when it's the player's turn
   useEffect(() => {
     if (isReady && position) {
       const currentTurn = game.turn();
       if (currentTurn === playerSide) {
-        analyzePosition(position);
+        analyzePosition(position, analysisDepth);
       }
     }
-  }, [position, isReady, playerSide]);
+  }, [position, isReady, playerSide, analysisDepth]);
 
   // Show toast when engine is ready
   useEffect(() => {
@@ -172,20 +174,72 @@ export const ChessBoard = () => {
               {isAnalyzing && <Loader2 className="h-4 w-4 animate-spin" />}
             </CardTitle>
             <CardDescription>
-              Stockfish best move suggestion
+              Stockfish 17.1 WASM - best move suggestion
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Status:</span>
-              {isReady ? (
-                <Badge variant="default">Ready</Badge>
-              ) : (
+              {engineStatus === 'loading' && (
                 <Badge variant="secondary">
                   <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                  Loading...
+                  Loading Engine...
                 </Badge>
               )}
+              {engineStatus === 'uci_init' && (
+                <Badge variant="secondary">
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  Initializing UCI...
+                </Badge>
+              )}
+              {engineStatus === 'ready' && (
+                <Badge variant="default">Ready</Badge>
+              )}
+              {engineStatus === 'error' && (
+                <Badge variant="destructive">Error</Badge>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="depth-select" className="text-sm font-medium flex items-center gap-2">
+                <Brain className="h-4 w-4" />
+                Intelligence Level
+              </Label>
+              <Select 
+                value={analysisDepth.toString()} 
+                onValueChange={(value) => setAnalysisDepth(parseInt(value))}
+                disabled={!isReady}
+              >
+                <SelectTrigger id="depth-select" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="14">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      <span>Lightning-Fast (Depth 14)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="18">
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-4 w-4" />
+                      <span>Balanced (Depth 18)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="22">
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-4 w-4" />
+                      <span>Deep Analysis (Depth 22)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="26">
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-4 w-4" />
+                      <span>Professional-Grade (Depth 26)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {!isPlayerTurn && (

@@ -1,13 +1,13 @@
-// Stockfish Web Worker
+// Stockfish Web Worker - Latest Version 17.1 with WASM
 // This worker loads the Stockfish engine and handles UCI communication
 
 const wasmSupported = typeof WebAssembly === 'object' && 
   WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
 
-// Load Stockfish from unpkg CDN (more reliable than jsdelivr)
+// Load latest Stockfish 17.1 from jsdelivr CDN with NNUE support
 const stockfishUrl = wasmSupported 
-  ? 'https://unpkg.com/stockfish@16.1.0/src/stockfish.wasm.js'
-  : 'https://unpkg.com/stockfish@16.1.0/src/stockfish.js';
+  ? 'https://cdn.jsdelivr.net/npm/stockfish.js@17.1.0/stockfish-nnue-17.1.js'
+  : 'https://cdn.jsdelivr.net/npm/stockfish.js@17.1.0/stockfish-17.1.js';
 
 // Import the Stockfish script
 importScripts(stockfishUrl);
