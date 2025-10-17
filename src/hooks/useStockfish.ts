@@ -6,14 +6,8 @@ interface StockfishMove {
   evaluation?: number;
 }
 
-interface StockfishEngine {
-  postMessage(message: string): void;
-  addMessageListener(callback: (message: string) => void): void;
-  terminate(): void;
-}
-
 export const useStockfish = () => {
-  const engineRef = useRef<StockfishEngine | null>(null);
+  const engineRef = useRef<Worker | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [bestMove, setBestMove] = useState<StockfishMove | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -21,46 +15,44 @@ export const useStockfish = () => {
   useEffect(() => {
     let mounted = true;
     
-    // Dynamically import and initialize Stockfish
-    const initEngine = async () => {
-      try {
-        // @ts-ignore - stockfish package has no types
-        const Stockfish = (await import('stockfish')).default;
-        
+    try {
+      // Create worker from public folder
+      const worker = new Worker('/stockfish-worker.js');
+      engineRef.current = worker;
+
+      worker.onmessage = (event) => {
         if (!mounted) return;
         
-        const engine = Stockfish();
-        engineRef.current = engine;
-
-        engine.addMessageListener((message: string) => {
-          if (!mounted) return;
-          
-          if (message === 'readyok') {
-            setIsReady(true);
-          } else if (message.startsWith('bestmove')) {
-            setIsAnalyzing(false);
-            const parts = message.split(' ');
-            if (parts[1] && parts[1] !== '(none)') {
-              const moveStr = parts[1];
-              setBestMove({
-                from: moveStr.substring(0, 2),
-                to: moveStr.substring(2, 4),
-              });
-            }
+        const message = event.data;
+        
+        if (message === 'worker_ready') {
+          // Worker is ready, initialize UCI
+          worker.postMessage('uci');
+          worker.postMessage('setoption name Ponder value true');
+          worker.postMessage('isready');
+        } else if (message === 'readyok') {
+          setIsReady(true);
+        } else if (message.startsWith('bestmove')) {
+          setIsAnalyzing(false);
+          const parts = message.split(' ');
+          if (parts[1] && parts[1] !== '(none)') {
+            const moveStr = parts[1];
+            setBestMove({
+              from: moveStr.substring(0, 2),
+              to: moveStr.substring(2, 4),
+            });
           }
-        });
+        } else if (message.startsWith('error:')) {
+          console.error('Stockfish error:', message);
+        }
+      };
 
-        // Initialize UCI
-        engine.postMessage('uci');
-        // Enable pondering for faster analysis
-        engine.postMessage('setoption name Ponder value true');
-        engine.postMessage('isready');
-      } catch (error) {
-        console.error('Failed to initialize Stockfish:', error);
-      }
-    };
-
-    initEngine();
+      worker.onerror = (error) => {
+        console.error('Worker error:', error);
+      };
+    } catch (error) {
+      console.error('Failed to initialize Stockfish worker:', error);
+    }
 
     return () => {
       mounted = false;
