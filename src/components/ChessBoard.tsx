@@ -81,12 +81,12 @@ export const ChessBoard = () => {
   
   if (bestMove && isPlayerTurn) {
     customSquareStyles[bestMove.from] = {
-      backgroundColor: 'hsl(var(--move-origin))',
-      opacity: 0.7,
+      border: '4px solid hsl(var(--move-origin))',
+      boxSizing: 'border-box',
     };
     customSquareStyles[bestMove.to] = {
-      backgroundColor: 'hsl(var(--move-destination))',
-      opacity: 0.7,
+      border: '4px solid hsl(var(--move-destination))',
+      boxSizing: 'border-box',
     };
   }
 
