@@ -6,51 +6,64 @@ interface StockfishMove {
   evaluation?: number;
 }
 
+interface StockfishEngine {
+  postMessage(message: string): void;
+  addMessageListener(callback: (message: string) => void): void;
+  terminate(): void;
+}
+
 export const useStockfish = () => {
-  const engineRef = useRef<Worker | null>(null);
+  const engineRef = useRef<StockfishEngine | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [bestMove, setBestMove] = useState<StockfishMove | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
-    // Initialize Stockfish worker
-    const wasmSupported = typeof WebAssembly === 'object';
+    let mounted = true;
     
-    try {
-      // Use stockfish.js from CDN
-      const engine = new Worker('/stockfish.js');
-      engineRef.current = engine;
-
-      engine.onmessage = (event) => {
-        const message = event.data;
+    // Dynamically import and initialize Stockfish
+    const initEngine = async () => {
+      try {
+        // @ts-ignore - stockfish package has no types
+        const Stockfish = (await import('stockfish')).default;
         
-        if (message === 'readyok') {
-          setIsReady(true);
-        } else if (message.startsWith('bestmove')) {
-          setIsAnalyzing(false);
-          // Parse bestmove e2e4 or bestmove e7e5 ponder e2e4
-          const parts = message.split(' ');
-          if (parts[1] && parts[1] !== '(none)') {
-            const moveStr = parts[1];
-            setBestMove({
-              from: moveStr.substring(0, 2),
-              to: moveStr.substring(2, 4),
-            });
-          }
-        }
-      };
+        if (!mounted) return;
+        
+        const engine = Stockfish();
+        engineRef.current = engine;
 
-      // Initialize UCI
-      engine.postMessage('uci');
-      // Enable pondering for faster analysis
-      engine.postMessage('setoption name Ponder value true');
-      engine.postMessage('isready');
-      
-    } catch (error) {
-      console.error('Failed to initialize Stockfish:', error);
-    }
+        engine.addMessageListener((message: string) => {
+          if (!mounted) return;
+          
+          if (message === 'readyok') {
+            setIsReady(true);
+          } else if (message.startsWith('bestmove')) {
+            setIsAnalyzing(false);
+            const parts = message.split(' ');
+            if (parts[1] && parts[1] !== '(none)') {
+              const moveStr = parts[1];
+              setBestMove({
+                from: moveStr.substring(0, 2),
+                to: moveStr.substring(2, 4),
+              });
+            }
+          }
+        });
+
+        // Initialize UCI
+        engine.postMessage('uci');
+        // Enable pondering for faster analysis
+        engine.postMessage('setoption name Ponder value true');
+        engine.postMessage('isready');
+      } catch (error) {
+        console.error('Failed to initialize Stockfish:', error);
+      }
+    };
+
+    initEngine();
 
     return () => {
+      mounted = false;
       if (engineRef.current) {
         engineRef.current.terminate();
       }
