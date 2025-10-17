@@ -8,9 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Typecast for react-chessboard due to type definition issues
-const ChessboardComponent = Chessboard as any;
-
 export const ChessBoard = () => {
   const [game, setGame] = useState(new Chess());
   const [position, setPosition] = useState(game.fen());
@@ -86,7 +83,7 @@ export const ChessBoard = () => {
       <Card className="overflow-hidden">
         <CardContent className="p-6">
           <div className="aspect-square w-full max-w-[600px] mx-auto">
-            <ChessboardComponent
+            <Chessboard
               position={position}
               onPieceDrop={onDrop}
               customSquareStyles={customSquareStyles}
