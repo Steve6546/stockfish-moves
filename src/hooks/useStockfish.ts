@@ -42,6 +42,8 @@ export const useStockfish = () => {
 
       // Initialize UCI
       engine.postMessage('uci');
+      // Enable pondering for faster analysis
+      engine.postMessage('setoption name Ponder value true');
       engine.postMessage('isready');
       
     } catch (error) {
@@ -55,7 +57,7 @@ export const useStockfish = () => {
     };
   }, []);
 
-  const analyzePosition = (fen: string, depth: number = 15) => {
+  const analyzePosition = (fen: string, depth: number = 20) => {
     if (!engineRef.current || !isReady) {
       console.warn('Engine not ready');
       return;

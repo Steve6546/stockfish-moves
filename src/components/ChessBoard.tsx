@@ -7,18 +7,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 export const ChessBoard = () => {
   const [game, setGame] = useState(new Chess());
   const [position, setPosition] = useState(game.fen());
+  const [playerSide, setPlayerSide] = useState<'w' | 'b'>('w'); // 'w' for white, 'b' for black
   const { isReady, bestMove, isAnalyzing, analyzePosition } = useStockfish();
 
-  // Trigger analysis whenever position changes
+  // Trigger analysis only when it's the player's turn
   useEffect(() => {
     if (isReady && position) {
-      analyzePosition(position);
+      const currentTurn = game.turn();
+      if (currentTurn === playerSide) {
+        analyzePosition(position);
+      }
     }
-  }, [position, isReady]);
+  }, [position, isReady, playerSide]);
 
   // Show toast when engine is ready
   useEffect(() => {
@@ -56,6 +62,11 @@ export const ChessBoard = () => {
     toast.info('Board reset to starting position');
   };
 
+  const togglePlayerSide = () => {
+    setPlayerSide(prev => prev === 'w' ? 'b' : 'w');
+    toast.info(`You are now playing as ${playerSide === 'w' ? 'Black' : 'White'}`);
+  };
+
   const clearBoard = () => {
     const emptyFen = '8/8/8/8/8/8/8/8 w - - 0 1';
     const newGame = new Chess(emptyFen);
@@ -64,10 +75,11 @@ export const ChessBoard = () => {
     toast.info('Board cleared');
   };
 
-  // Custom square styles to highlight best move
+  // Custom square styles to highlight best move (only on player's turn)
   const customSquareStyles: { [square: string]: React.CSSProperties } = {};
+  const isPlayerTurn = game.turn() === playerSide;
   
-  if (bestMove) {
+  if (bestMove && isPlayerTurn) {
     customSquareStyles[bestMove.from] = {
       backgroundColor: 'hsl(var(--move-origin))',
       opacity: 0.7,
@@ -93,6 +105,37 @@ export const ChessBoard = () => {
       </Card>
 
       <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Turn Status
+            </CardTitle>
+            <CardDescription>
+              {isPlayerTurn ? (
+                <span className="text-success font-semibold">
+                  Your Turn: {isAnalyzing ? 'Analysis in progress...' : 'Ready'}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">
+                  Opponent's Turn: Input opponent's move
+                </span>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="side-toggle" className="text-sm font-medium">
+                Playing as: <span className="font-bold">{playerSide === 'w' ? 'White' : 'Black'}</span>
+              </Label>
+              <Switch
+                id="side-toggle"
+                checked={playerSide === 'b'}
+                onCheckedChange={togglePlayerSide}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -145,7 +188,13 @@ export const ChessBoard = () => {
               )}
             </div>
 
-            {bestMove && (
+            {!isPlayerTurn && (
+              <div className="text-sm text-muted-foreground text-center py-4 border rounded-lg bg-muted/30">
+                Analysis paused - waiting for your turn
+              </div>
+            )}
+
+            {bestMove && isPlayerTurn && (
               <div className="space-y-3">
                 <div className="rounded-lg border bg-muted/50 p-4">
                   <div className="text-sm text-muted-foreground mb-1">Best Move</div>
@@ -171,9 +220,9 @@ export const ChessBoard = () => {
               </div>
             )}
 
-            {!bestMove && isReady && !isAnalyzing && (
+            {!bestMove && isReady && !isAnalyzing && isPlayerTurn && (
               <div className="text-sm text-muted-foreground text-center py-4">
-                Make a move to see engine analysis
+                Analyzing position...
               </div>
             )}
           </CardContent>
