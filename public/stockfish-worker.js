@@ -1,15 +1,15 @@
-// Stockfish Web Worker - Bundled Version
-// Loads Stockfish from local project files (no external CDN dependency)
+// Stockfish Web Worker - Using CDN (single-threaded version)
+// This version doesn't require SharedArrayBuffer and works in all browsers
 
 const wasmSupported = typeof WebAssembly === 'object' && 
   WebAssembly.validate(Uint8Array.of(0x0, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00));
 
-// Load Stockfish from local bundled files
-const stockfishUrl = wasmSupported 
-  ? '/stockfish/stockfish-nnue-17.1.js'
-  : '/stockfish/stockfish-nnue-17.1.js';
+// Use single-threaded version that doesn't require SharedArrayBuffer
+const stockfishUrl = wasmSupported
+  ? 'https://unpkg.com/stockfish@17.1.0/src/stockfish-17.1-lite-single-03e3232.js'
+  : 'https://unpkg.com/stockfish@17.1.0/src/stockfish-17.1-asm-341ff22.js';
 
-// Import the Stockfish script from local files
+// Import the Stockfish script
 importScripts(stockfishUrl);
 
 let engine;

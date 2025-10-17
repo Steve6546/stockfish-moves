@@ -17,11 +17,8 @@ export const useStockfish = () => {
     let mounted = true;
     
     try {
-      // Create worker from bundled npm package
-      const worker = new Worker(
-        new URL('../workers/stockfish.worker.ts', import.meta.url),
-        { type: 'module' }
-      );
+      // Create worker from public folder
+      const worker = new Worker('/stockfish-worker.js');
       engineRef.current = worker;
 
       worker.onmessage = (event) => {
